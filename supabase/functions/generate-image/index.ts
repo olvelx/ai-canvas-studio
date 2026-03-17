@@ -84,7 +84,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: arkModel,
           prompt: prompt,
-          size: '1024x1024',
+          size: '2048x2048',
           response_format: 'url',
         }),
       });
