@@ -58,7 +58,7 @@ export const AI_MODELS: AIModel[] = [
     name: 'Seedream 5.0 Lite',
     provider: '字节跳动 / 火山引擎',
     description: '响应更精准，效果更智能',
-    backendModel: 'seedream-5.0',
+    backendModel: 'ep-m-20260306020558-r225p',
     capabilities: ['text2img'],
     badge: 'NEW',
     apiKeyPlaceholder: '输入火山引擎 API Key',
