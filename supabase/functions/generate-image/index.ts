@@ -73,9 +73,8 @@ serve(async (req) => {
 
     // Seedream family - uses Volcengine Ark API (OpenAI-compatible)
     if (modelId?.startsWith('seedream')) {
-      const defaultSeedreamModel = modelId === 'seedream-4.5'
-        ? 'doubao-seedream-4-5-251128'
-        : 'ep-m-20260306020558-r225p';
+      const defaultSeedreamModel = modelId ===  '-ep-m-20260317133017-d9hzp' 
+    ? '-ep-m-20260306020558-r225p';
       const arkModel = model?.trim() || defaultSeedreamModel;
       
       const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/images/generations', {
