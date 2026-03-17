@@ -73,7 +73,7 @@ serve(async (req) => {
 
     // Seedream family - uses Volcengine Ark API (OpenAI-compatible)
     if (modelId?.startsWith('seedream')) {
-      const arkModel = modelId === 'seedream-4.5' ? 'doubao-seedream-4.5' : 'doubao-seedream-5.0';
+      const arkModel = modelId === 'seedream-4.5' ? 'doubao-seedream-4-5-251128' : 'doubao-seedream-5.0-lite';
       
       const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/images/generations', {
         method: 'POST',
@@ -84,7 +84,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: arkModel,
           prompt: prompt,
-          size: '1024x1024',
+          size: '2048x2048',
           response_format: 'url',
         }),
       });

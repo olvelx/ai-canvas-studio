@@ -55,7 +55,7 @@ export const AI_MODELS: AIModel[] = [
   },
   {
     id: 'seedream-5.0',
-    name: 'Seedream 5.0',
+    name: 'Seedream 5.0 Lite',
     provider: '字节跳动 / 火山引擎',
     description: '响应更精准，效果更智能',
     backendModel: 'seedream-5.0',
