@@ -71,20 +71,21 @@ serve(async (req) => {
       });
     }
 
-    // Seedream family - uses Volcengine API
+    // Seedream family - uses Volcengine Ark API (OpenAI-compatible)
     if (modelId?.startsWith('seedream')) {
-      // Volcengine visual API endpoint
-      const response = await fetch('https://visual.volcengineapi.com/v1/text_to_image', {
+      const arkModel = modelId === 'seedream-4.5' ? 'doubao-seedream-4.5' : 'doubao-seedream-5.0';
+      
+      const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/images/generations', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: model,
+          model: arkModel,
           prompt: prompt,
-          width: 1024,
-          height: 1024,
+          size: '1024x1024',
+          response_format: 'url',
         }),
       });
 
@@ -94,9 +95,7 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      const imageUrl = data?.data?.[0]?.url || data?.data?.[0]?.b64_json 
-        ? `data:image/png;base64,${data.data[0].b64_json}` 
-        : null;
+      const imageUrl = data?.data?.[0]?.url;
 
       if (!imageUrl) {
         throw new Error('Seedream 未返回图片数据');
