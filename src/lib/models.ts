@@ -22,32 +22,76 @@ export interface AIModel {
   sizes: ImageSize[];
 }
 
-// Gemini models - use Google Gemini API directly
-const GEMINI_SIZES: ImageSize[] = [
-  { label: '1:1', value: '1:1', description: '正方形' },
-  { label: '3:4', value: '3:4', description: '竖版' },
-  { label: '4:3', value: '4:3', description: '横版' },
-  { label: '9:16', value: '9:16', description: '手机竖屏' },
-  { label: '16:9', value: '16:9', description: '宽屏' },
+// ===================== 统一尺寸配置（按1K/2K/3K/4K分类）=====================
+// 1K 尺寸（对应图片配置）
+const SIZE_1K: ImageSize[] = [
+  { label: '1:1 (1K)', value: '1024x1024', description: '1K 正方形' },
+  { label: '4:3 (1K)', value: '1152x864', description: '1K 横版' },
+  { label: '3:4 (1K)', value: '864x1152', description: '1K 竖版' },
+  { label: '16:9 (1K)', value: '1280x720', description: '1K 宽屏' },
+  { label: '9:16 (1K)', value: '720x1280', description: '1K 手机竖屏' },
+  { label: '3:2 (1K)', value: '832x1248', description: '1K 摄影横版' },
+  { label: '2:3 (1K)', value: '1248x832', description: '1K 摄影竖版' },
+  { label: '21:9 (1K)', value: '1512x648', description: '1K 超宽屏' },
 ];
 
-// Seedream sizes
-const SEEDREAM_SIZES: ImageSize[] = [
-  { label: '1024×1024', value: '1024x1024', description: '1:1 标准' },
-  { label: '1280×720', value: '1280x720', description: '16:9 横版' },
-  { label: '720×1280', value: '720x1280', description: '9:16 竖版' },
-  { label: '1536×1024', value: '1536x1024', description: '3:2 横版' },
-  { label: '1024×1536', value: '1024x1536', description: '2:3 竖版' },
-  { label: '2048×2048', value: '2048x2048', description: '1:1 高清' },
+// 2K 尺寸（对应图片配置）
+const SIZE_2K: ImageSize[] = [
+  { label: '1:1 (2K)', value: '2048x2048', description: '2K 正方形' },
+  { label: '4:3 (2K)', value: '2304x1728', description: '2K 横版' },
+  { label: '3:4 (2K)', value: '1728x2304', description: '2K 竖版' },
+  { label: '16:9 (2K)', value: '2848x1600', description: '2K 宽屏' },
+  { label: '9:16 (2K)', value: '1600x2848', description: '2K 手机竖屏' },
+  { label: '3:2 (2K)', value: '2496x1664', description: '2K 摄影横版' },
+  { label: '2:3 (2K)', value: '1664x2496', description: '2K 摄影竖版' },
+  { label: '21:9 (2K)', value: '3136x1344', description: '2K 超宽屏' },
 ];
 
-// Seedance video sizes
+// 3K 尺寸（对应图片配置）
+const SIZE_3K: ImageSize[] = [
+  { label: '1:1 (3K)', value: '3072x3072', description: '3K 正方形' },
+  { label: '4:3 (3K)', value: '3456x2592', description: '3K 横版' },
+  { label: '3:4 (3K)', value: '2592x3456', description: '3K 竖版' },
+  { label: '16:9 (3K)', value: '4096x2304', description: '3K 宽屏' },
+  { label: '9:16 (3K)', value: '2304x4096', description: '3K 手机竖屏' },
+  { label: '3:2 (3K)', value: '3744x2496', description: '3K 摄影横版' },
+  { label: '2:3 (3K)', value: '2496x3744', description: '3K 摄影竖版' },
+  { label: '21:9 (3K)', value: '4704x2016', description: '3K 超宽屏' },
+];
+
+// 4K 尺寸（对应图片配置）
+const SIZE_4K: ImageSize[] = [
+  { label: '1:1 (4K)', value: '4096x4096', description: '4K 正方形' },
+  { label: '3:4 (4K)', value: '3520x4704', description: '4K 竖版' },
+  { label: '4:3 (4K)', value: '4704x3520', description: '4K 横版' },
+  { label: '16:9 (4K)', value: '5504x3040', description: '4K 宽屏' },
+  { label: '9:16 (4K)', value: '3040x5504', description: '4K 手机竖屏' },
+  { label: '2:3 (4K)', value: '3328x4992', description: '4K 摄影竖版' },
+  { label: '3:2 (4K)', value: '4992x3328', description: '4K 摄影横版' },
+  { label: '21:9 (4K)', value: '6240x2656', description: '4K 超宽屏' },
+];
+
+// ===================== 模型专属尺寸整合 =====================
+// Nano Banana 仅支持1K
+const GEMINI_NANO_BANANA_SIZES = SIZE_1K;
+
+// Nano Banana 2 / Pro 支持1K+2K+4K
+const GEMINI_NANO_BANANA_PRO_SIZES = [...SIZE_1K, ...SIZE_2K, ...SIZE_4K];
+
+// Seedream 4.5 支持2K+4K
+const SEEDREAM_4_5_SIZES = [...SIZE_2K, ...SIZE_4K];
+
+// Seedream 5.0 支持2K+3K
+const SEEDREAM_5_0_SIZES = [...SIZE_2K, ...SIZE_3K];
+
+// Seedance 专属尺寸（保持原有配置，不关联K级尺寸）
 const SEEDANCE_SIZES: ImageSize[] = [
   { label: '16:9 横屏', value: '16:9', description: '1280×720' },
   { label: '9:16 竖屏', value: '9:16', description: '720×1280' },
   { label: '1:1 方形', value: '1:1', description: '720×720' },
 ];
 
+// ===================== 模型配置（核心）=====================
 export const AI_MODELS: AIModel[] = [
   // === Image Generation Models ===
   {
@@ -61,7 +105,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入 Google Gemini API Key',
     apiKeyLabel: 'Google Gemini API Key',
     apiType: 'gemini',
-    sizes: GEMINI_SIZES,
+    sizes: GEMINI_NANO_BANANA_SIZES, // 仅1K
   },
   {
     id: 'nano-banana-2',
@@ -75,7 +119,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入 Google Gemini API Key',
     apiKeyLabel: 'Google Gemini API Key',
     apiType: 'gemini',
-    sizes: GEMINI_SIZES,
+    sizes: GEMINI_NANO_BANANA_PRO_SIZES, // 1K+2K+4K
   },
   {
     id: 'nano-banana-pro',
@@ -89,7 +133,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入 Google Gemini API Key',
     apiKeyLabel: 'Google Gemini API Key',
     apiType: 'gemini',
-    sizes: GEMINI_SIZES,
+    sizes: GEMINI_NANO_BANANA_PRO_SIZES, // 1K+2K+4K
   },
   {
     id: 'seedream-4.5',
@@ -102,7 +146,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入火山引擎 API Key',
     apiKeyLabel: '火山引擎 API Key',
     apiType: 'volcengine-image',
-    sizes: SEEDREAM_SIZES,
+    sizes: SEEDREAM_4_5_SIZES, // 2K+4K
   },
   {
     id: 'seedream-5.0',
@@ -116,7 +160,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入火山引擎 API Key',
     apiKeyLabel: '火山引擎 API Key',
     apiType: 'volcengine-image',
-    sizes: SEEDREAM_SIZES,
+    sizes: SEEDREAM_5_0_SIZES, // 2K+3K
   },
 
   // === Video Generation Models ===
@@ -132,7 +176,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入火山引擎 API Key',
     apiKeyLabel: '火山引擎 API Key',
     apiType: 'volcengine-video',
-    sizes: SEEDANCE_SIZES,
+    sizes: SEEDANCE_SIZES, // 保持原有尺寸，不关联K级
   },
 ];
 
