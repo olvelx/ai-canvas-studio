@@ -49,20 +49,10 @@ const DEFAULT_SIZES = {
 
 // 2. CORS 配置（精简且覆盖核心需求）
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
-
-// 3. 通用请求工具（带超时控制）
-async function fetchWithTimeout(
-  url: string,
-  options: RequestInit,
-  timeout = 60000 // 默认60秒超时
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
+  
   try {
     const response = await fetch(url, {
       ...options,
@@ -95,22 +85,14 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
 
   try {
-    // 解析请求体（增加异常捕获）
-    let body: any;
-    try {
-      body = await req.json();
-    } catch (err) {
-      console.error(`[${requestId}] 解析请求体失败:`, err);
-      return new Response(
-        JSON.stringify({ error: "请求体格式错误，需为合法 JSON" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    const { model, modelId, prompt, image, apiKey, apiType, size } = await req.json();
 
-    const { model, modelId, prompt, image, apiKey, apiType, size } = body;
+    if (!apiKey || !prompt || !model) {
+      return new Response(JSON.stringify({ error: '缺少必要参数' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // 核心参数校验
     const missingParams: string[] = [];
