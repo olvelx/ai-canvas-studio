@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { model, modelId, prompt, image, apiKey } = await req.json();
+    const { model, modelId, prompt, image, apiKey, apiType, size } = await req.json();
 
     if (!apiKey || !prompt || !model) {
       return new Response(JSON.stringify({ error: '缺少必要参数' }), {
@@ -20,62 +20,81 @@ serve(async (req) => {
       });
     }
 
-    // Nano Banana family - uses Lovable AI gateway (OpenAI-compatible)
-    if (modelId?.startsWith('nano-banana')) {
-      const messages: any[] = [];
-      
-      if (image) {
-        // img2img: send image + text prompt
-        messages.push({
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: image } },
-          ],
-        });
-      } else {
-        // text2img
-        messages.push({
-          role: 'user',
-          content: prompt,
-        });
+    // ====== Google Gemini API (Nano Banana series) ======
+    if (apiType === 'gemini') {
+      const parts: any[] = [];
+
+      // Build prompt with aspect ratio hint if provided
+      let fullPrompt = prompt;
+      if (size && size !== '1:1') {
+        fullPrompt = `${prompt}\n\n(Please generate image with aspect ratio ${size})`;
       }
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      if (image) {
+        // img2img: text + image
+        parts.push({ text: fullPrompt });
+        
+        // Extract base64 data from data URL
+        const base64Match = image.match(/^data:([^;]+);base64,(.+)$/);
+        if (base64Match) {
+          parts.push({
+            inlineData: {
+              mimeType: base64Match[1],
+              data: base64Match[2],
+            },
+          });
+        }
+      } else {
+        // text2img
+        parts.push({ text: fullPrompt });
+      }
+
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      
+      const response = await fetch(geminiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'x-goog-api-key': apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model,
-          messages,
-          modalities: ['image', 'text'],
+          contents: [{ parts }],
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE'],
+          },
         }),
       });
 
       if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`API 调用失败 [${response.status}]: ${errText}`);
+        throw new Error(`Gemini API 调用失败 [${response.status}]: ${errText}`);
       }
 
       const data = await response.json();
-      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-      if (!imageUrl) {
-        throw new Error('未能生成图片，请检查提示词或重试');
+      
+      // Extract image from response parts
+      const candidate = data.candidates?.[0];
+      if (!candidate?.content?.parts) {
+        throw new Error('Gemini 未返回有效内容');
       }
 
-      return new Response(JSON.stringify({ imageUrl }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      for (const part of candidate.content.parts) {
+        if (part.inlineData) {
+          // Return as data URL
+          const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+          return new Response(JSON.stringify({ imageUrl: dataUrl }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      throw new Error('Gemini 未能生成图片，请检查提示词或重试');
     }
 
-    // Seedream family - uses Volcengine Ark API (OpenAI-compatible)
-    if (modelId?.startsWith('seedream')) {
-      const defaultSeedreamModel = modelId ===  '-ep-m-20260317133017-d9hzp' 
-    ? '-ep-m-20260306020558-r225p';
-      const arkModel = model?.trim() || defaultSeedreamModel;
+    // ====== Volcengine Ark API - Seedream (Image Generation) ======
+    if (apiType === 'volcengine-image') {
+      const arkModel = model?.trim();
+      const imageSize = size || '2048x2048';
       
       const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/images/generations', {
         method: 'POST',
@@ -86,7 +105,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: arkModel,
           prompt: prompt,
-          size: '2048x2048',
+          size: imageSize,
           response_format: 'url',
         }),
       });
@@ -108,13 +127,65 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: '不支持的模型' }), {
+    // ====== Volcengine Ark API - Seedance (Video Generation) ======
+    if (apiType === 'volcengine-video') {
+      const arkModel = model?.trim();
+      if (!arkModel) {
+        throw new Error('请提供 Seedance 接入点 ID');
+      }
+
+      // Create video generation task
+      const requestBody: any = {
+        model: arkModel,
+        content: [
+          { type: 'text', text: prompt },
+        ],
+      };
+
+      // Add image for img2video
+      if (image) {
+        const base64Match = image.match(/^data:([^;]+);base64,(.+)$/);
+        if (base64Match) {
+          requestBody.content.push({
+            type: 'image_url',
+            image_url: { url: image },
+          });
+        }
+      }
+
+      const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/videos/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Seedance API 调用失败 [${response.status}]: ${errText}`);
+      }
+
+      const data = await response.json();
+      
+      // Video generation is async - return task ID for polling
+      return new Response(JSON.stringify({ 
+        taskId: data.id,
+        status: 'processing',
+        message: '视频生成中，请稍候...',
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: '不支持的模型类型' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error: unknown) {
-    console.error('Generate image error:', error);
+    console.error('Generate error:', error);
     const message = error instanceof Error ? error.message : '未知错误';
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
