@@ -1,14 +1,20 @@
 import React from 'react';
-import { Sparkles, Image, Palette, Wand2 } from 'lucide-react';
+import { Sparkles, Image, Video, MessageSquare } from 'lucide-react';
+
+type TabType = 'image' | 'video' | 'chat';
 
 const navItems = [
-  { icon: Sparkles, label: 'AI 图像生成', active: true },
-  { icon: Image, label: '图生图', active: false },
-  { icon: Palette, label: '风格迁移', active: false, disabled: true },
-  { icon: Wand2, label: '智能修图', active: false, disabled: true },
+  { id: 'image' as TabType, icon: Image, label: 'AI 图像生成' },
+  { id: 'video' as TabType, icon: Video, label: 'AI 视频生成' },
+  { id: 'chat' as TabType, icon: MessageSquare, label: 'AI 连续对话' },
 ];
 
-export const AppSidebar = () => {
+interface AppSidebarProps {
+  activeTab: TabType;
+  onTabChange: (tab: TabType) => void;
+}
+
+export const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   return (
     <aside className="w-[220px] min-w-[220px] bg-sidebar-bg flex flex-col border-r border-border/50">
       {/* Logo */}
@@ -29,23 +35,16 @@ export const AppSidebar = () => {
         <p className="px-3 py-2 text-xs font-medium text-sidebar-fg/60 uppercase tracking-wider">创作工具</p>
         {navItems.map((item) => (
           <button
-            key={item.label}
-            disabled={item.disabled}
+            key={item.id}
+            onClick={() => onTabChange(item.id)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-              item.active
+              activeTab === item.id
                 ? 'bg-sidebar-active/15 text-sidebar-active font-medium'
-                : item.disabled
-                ? 'text-sidebar-fg/30 cursor-not-allowed'
                 : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-primary-foreground'
             }`}
           >
             <item.icon className="w-4 h-4" />
             {item.label}
-            {item.disabled && (
-              <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-sidebar-hover text-sidebar-fg/40">
-                即将推出
-              </span>
-            )}
           </button>
         ))}
       </nav>
