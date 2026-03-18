@@ -125,7 +125,7 @@ export const AI_MODELS: AIModel[] = [
     name: 'Seedance 1.5',
     provider: '字节跳动 / 火山引擎',
     description: '高质量AI视频生成',
-    backendModel: '', // 需要用户提供接入点ID
+    backendModel: 'doubao-seedance-1-5-pro-251215',
     capabilities: ['text2img', 'img2img'],
     category: 'video',
     badge: 'VIDEO',
