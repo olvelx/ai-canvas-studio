@@ -47,12 +47,23 @@ const DEFAULT_SIZES = {
   seedance: "16:9",      // Seedance 保持原有默认
 };
 
-// 2. CORS 配置（精简且覆盖核心需求）
+// 2. 完整CORS配置（解决前端预检请求失败）
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Max-Age': '86400'
 };
-  
+
+// 3. 实现fetchWithTimeout函数（之前缺失）
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeout = 60000 // 默认60秒超时
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -74,27 +85,44 @@ function getAspectRatio(size: string): string {
   return RESOLUTION_TO_ASPECT_RATIO[size] || "1:1";
 }
 
-// 4. 主服务逻辑
+// 辅助函数：生成兼容的requestId（避免crypto权限问题）
+function generateRequestId(): string {
+  // 替代crypto.randomUUID，无需特殊权限
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
+
+// 主服务逻辑
 serve(async (req) => {
-  // 处理 OPTIONS 预检请求
+  // 处理 OPTIONS 预检请求（必须优先处理）
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    });
   }
 
-  // 生成请求ID（便于日志排查）
-  const requestId = crypto.randomUUID();
+  // 生成请求ID（兼容无crypto权限的场景）
+  const requestId = generateRequestId();
 
   try {
-    const { model, modelId, prompt, image, apiKey, apiType, size } = await req.json();
-
-    if (!apiKey || !prompt || !model) {
-      return new Response(JSON.stringify({ error: '缺少必要参数' }), {
+    // ====== 1. 安全解析请求体（核心修复：避免JSON解析崩溃）======
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch (err) {
+      console.error(`[${requestId}] JSON解析失败:`, err);
+      return new Response(JSON.stringify({ 
+        requestId, 
+        error: "请求体格式错误，请传递合法JSON" 
+      }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // 核心参数校验
+    const { model, modelId, prompt, image, apiKey, apiType, size } = body;
+
+    // ====== 2. 统一参数校验（移除重复校验）======
     const missingParams: string[] = [];
     if (!apiKey) missingParams.push("apiKey");
     if (!prompt) missingParams.push("prompt");
@@ -104,7 +132,10 @@ serve(async (req) => {
     if (missingParams.length > 0) {
       const errorMsg = `缺少必要参数: ${missingParams.join(", ")}`;
       console.warn(`[${requestId}] ${errorMsg}`);
-      return new Response(JSON.stringify({ error: errorMsg }), {
+      return new Response(JSON.stringify({ 
+        requestId, 
+        error: errorMsg 
+      }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -117,7 +148,7 @@ serve(async (req) => {
       // 拼接带比例的提示词（适配新的分辨率尺寸）
       let fullPrompt = prompt;
       const targetSize = size || DEFAULT_SIZES.gemini;
-      const aspectRatio = getAspectRatio(targetSize); // 提取宽高比
+      const aspectRatio = getAspectRatio(targetSize); 
       if (aspectRatio !== "1:1") {
         fullPrompt = `${prompt}\n\n(Please generate image with aspect ratio ${aspectRatio})`;
       }
@@ -138,7 +169,7 @@ serve(async (req) => {
         }
       }
 
-      // 调用 Gemini API
+      // 调用 Gemini API（修复responseModalities错误）
       const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
       const response = await fetchWithTimeout(
         geminiUrl,
@@ -151,12 +182,12 @@ serve(async (req) => {
           body: JSON.stringify({
             contents: [{ parts }],
             generationConfig: {
-              responseModalities: ["TEXT"],
-              temperature: 0.7, // 增加合理默认值
+              // 移除错误的responseModalities配置
+              temperature: 0.7, 
             },
           }),
         },
-        30000 // Gemini 请求30秒超时
+        30000 
       );
 
       if (!response.ok) {
@@ -193,13 +224,12 @@ serve(async (req) => {
     // ====== Volcengine Seedream 图片生成 ======
     if (apiType === "volcengine-image") {
       const arkModel = model.trim();
-      // 使用新的默认尺寸，且直接传递分辨率（火山引擎支持）
       const imageSize = size || DEFAULT_SIZES.seedream;
 
-      // 校验尺寸是否为支持的分辨率（可选，增强健壮性）
-      if (imageSize.includes("x") && !RESOLUTION_TO_ASPECT_RATIO[imageSize]) {
-        throw new Error(`Seedream 不支持该尺寸: ${imageSize}，请选择2K/3K/4K标准尺寸`);
-      }
+      // 可选尺寸校验（注释掉避免严格限制）
+      // if (imageSize.includes("x") && !RESOLUTION_TO_ASPECT_RATIO[imageSize]) {
+      //   throw new Error(`Seedream 不支持该尺寸: ${imageSize}，请选择2K/3K/4K标准尺寸`);
+      // }
 
       const response = await fetchWithTimeout(
         "https://ark.cn-beijing.volces.com/api/v3/images/generations",
@@ -212,11 +242,11 @@ serve(async (req) => {
           body: JSON.stringify({
             model: arkModel,
             prompt: prompt,
-            size: imageSize, // 直接传递1K/2K/3K/4K分辨率
+            size: imageSize,
             response_format: "url",
           }),
         },
-        60000 // Seedream 请求60秒超时
+        60000 
       );
 
       if (!response.ok) {
@@ -245,7 +275,6 @@ serve(async (req) => {
         throw new Error("请提供 Seedance 接入点 ID");
       }
 
-      // 构造请求体
       const requestBody: {
         model: string;
         content: Array<{ type: string; text?: string; image_url?: { url: string } }>;
@@ -254,11 +283,10 @@ serve(async (req) => {
         content: [{ type: "text", text: prompt }],
       };
 
-      // 处理图片输入（img2video）- 修复参数格式
+      // 处理图片输入（img2video）
       if (image) {
         const base64Match = image.match(/^data:([^;]+);base64,(.+)$/);
         if (base64Match) {
-          // 修复：火山方舟需要直接传 base64 字符串，而非完整 DataURL
           requestBody.content.push({
             type: "image_url",
             image_url: { url: base64Match[2] },
@@ -278,7 +306,7 @@ serve(async (req) => {
           },
           body: JSON.stringify(requestBody),
         },
-        60000 // Seedance 请求60秒超时
+        60000 
       );
 
       if (!response.ok) {
@@ -311,13 +339,16 @@ serve(async (req) => {
     // 不支持的 API 类型
     const unsupportedMsg = `不支持的 API 类型: ${apiType}`;
     console.warn(`[${requestId}] ${unsupportedMsg}`);
-    return new Response(JSON.stringify({ error: unsupportedMsg }), {
+    return new Response(JSON.stringify({ 
+      requestId, 
+      error: unsupportedMsg 
+    }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (error) {
-    // 统一异常处理
+    // 统一异常处理（保证前端始终收到JSON响应）
     const errMsg = error instanceof Error ? error.message : "未知服务器错误";
     console.error(`[${requestId}] 处理请求失败:`, errMsg, error);
     return new Response(
@@ -330,4 +361,5 @@ serve(async (req) => {
   }
 });
 
-console.log("Deno 服务已启动，监听默认端口 (8000)");
+console.log("✅ Deno 服务已启动，监听端口: 8000");
+console.log("📌 启动命令: deno run --allow-net --allow-crypto your-file-name.ts");
