@@ -2,3 +2,9 @@ project_id = "viuelmmgigpchufzyjrk"
 
 [functions.generate-image]
 verify_jwt = false
+
+[functions.query-video-task]
+verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false

@@ -1,9 +1,10 @@
 export type GenerationMode = 'text2img' | 'img2img';
+export type VideoMode = 'text2video' | 'img2video' | 'img2video_first_last' | 'img2video_reference' | 'draft';
 export type ModelCategory = 'image' | 'video' | 'chat';
 
 export interface ImageSize {
   label: string;
-  value: string; // e.g. "1024x1024" or "16:9"
+  value: string;
   description?: string;
 }
 
@@ -20,10 +21,10 @@ export interface AIModel {
   apiKeyLabel: string;
   apiType: 'gemini' | 'volcengine-image' | 'volcengine-video' | 'lovable';
   sizes: ImageSize[];
+  videoModes?: VideoMode[];
 }
 
-// ===================== 统一尺寸配置（按1K/2K/3K/4K分类）=====================
-// 1K 尺寸（对应图片配置）
+// ===================== 尺寸配置 =====================
 const SIZE_1K: ImageSize[] = [
   { label: '1:1 (1K)', value: '1024x1024', description: '1K 正方形' },
   { label: '4:3 (1K)', value: '1152x864', description: '1K 横版' },
@@ -35,7 +36,6 @@ const SIZE_1K: ImageSize[] = [
   { label: '21:9 (1K)', value: '1512x648', description: '1K 超宽屏' },
 ];
 
-// 2K 尺寸（对应图片配置）
 const SIZE_2K: ImageSize[] = [
   { label: '1:1 (2K)', value: '2048x2048', description: '2K 正方形' },
   { label: '4:3 (2K)', value: '2304x1728', description: '2K 横版' },
@@ -47,7 +47,6 @@ const SIZE_2K: ImageSize[] = [
   { label: '21:9 (2K)', value: '3136x1344', description: '2K 超宽屏' },
 ];
 
-// 3K 尺寸（对应图片配置）
 const SIZE_3K: ImageSize[] = [
   { label: '1:1 (3K)', value: '3072x3072', description: '3K 正方形' },
   { label: '4:3 (3K)', value: '3456x2592', description: '3K 横版' },
@@ -59,7 +58,6 @@ const SIZE_3K: ImageSize[] = [
   { label: '21:9 (3K)', value: '4704x2016', description: '3K 超宽屏' },
 ];
 
-// 4K 尺寸（对应图片配置）
 const SIZE_4K: ImageSize[] = [
   { label: '1:1 (4K)', value: '4096x4096', description: '4K 正方形' },
   { label: '3:4 (4K)', value: '3520x4704', description: '4K 竖版' },
@@ -71,29 +69,20 @@ const SIZE_4K: ImageSize[] = [
   { label: '21:9 (4K)', value: '6240x2656', description: '4K 超宽屏' },
 ];
 
-// ===================== 模型专属尺寸整合 =====================
-// Nano Banana 仅支持1K
 const GEMINI_NANO_BANANA_SIZES = SIZE_1K;
-
-// Nano Banana 2 / Pro 支持1K+2K+4K
 const GEMINI_NANO_BANANA_PRO_SIZES = [...SIZE_1K, ...SIZE_2K, ...SIZE_4K];
-
-// Seedream 4.5 支持2K+4K
 const SEEDREAM_4_5_SIZES = [...SIZE_2K, ...SIZE_4K];
-
-// Seedream 5.0 支持2K+3K
 const SEEDREAM_5_0_SIZES = [...SIZE_2K, ...SIZE_3K];
 
-// Seedance 专属尺寸（保持原有配置，不关联K级尺寸）
 const SEEDANCE_SIZES: ImageSize[] = [
   { label: '16:9 横屏', value: '16:9', description: '1280×720' },
   { label: '9:16 竖屏', value: '9:16', description: '720×1280' },
   { label: '1:1 方形', value: '1:1', description: '720×720' },
 ];
 
-// ===================== 模型配置（核心）=====================
+// ===================== 模型配置 =====================
 export const AI_MODELS: AIModel[] = [
-  // === Image Generation Models ===
+  // === Image Models ===
   {
     id: 'nano-banana',
     name: 'Nano Banana',
@@ -105,7 +94,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入 Google Gemini API Key',
     apiKeyLabel: 'Google Gemini API Key',
     apiType: 'gemini',
-    sizes: GEMINI_NANO_BANANA_SIZES, // 仅1K
+    sizes: GEMINI_NANO_BANANA_SIZES,
   },
   {
     id: 'nano-banana-2',
@@ -119,7 +108,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入 Google Gemini API Key',
     apiKeyLabel: 'Google Gemini API Key',
     apiType: 'gemini',
-    sizes: GEMINI_NANO_BANANA_PRO_SIZES, // 1K+2K+4K
+    sizes: GEMINI_NANO_BANANA_PRO_SIZES,
   },
   {
     id: 'nano-banana-pro',
@@ -133,42 +122,42 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入 Google Gemini API Key',
     apiKeyLabel: 'Google Gemini API Key',
     apiType: 'gemini',
-    sizes: GEMINI_NANO_BANANA_PRO_SIZES, // 1K+2K+4K
+    sizes: GEMINI_NANO_BANANA_PRO_SIZES,
   },
   {
     id: 'seedream-4.5',
     name: 'Seedream 4.5',
     provider: '字节跳动 / 火山引擎',
-    description: '人像美化和文字方面升级',
+    description: '人像美化和文字方面升级，支持图生图',
     backendModel: 'ep-m-20260317133017-d9hzp',
-    capabilities: ['text2img'],
+    capabilities: ['text2img', 'img2img'],
     category: 'image',
     apiKeyPlaceholder: '输入火山引擎 API Key',
     apiKeyLabel: '火山引擎 API Key',
     apiType: 'volcengine-image',
-    sizes: SEEDREAM_4_5_SIZES, // 2K+4K
+    sizes: SEEDREAM_4_5_SIZES,
   },
   {
     id: 'seedream-5.0',
     name: 'Seedream 5.0 Lite',
     provider: '字节跳动 / 火山引擎',
-    description: '响应更精准，效果更智能',
+    description: '响应更精准，效果更智能，支持图生图',
     backendModel: 'ep-m-20260306020558-r225p',
-    capabilities: ['text2img'],
+    capabilities: ['text2img', 'img2img'],
     category: 'image',
     badge: 'NEW',
     apiKeyPlaceholder: '输入火山引擎 API Key',
     apiKeyLabel: '火山引擎 API Key',
     apiType: 'volcengine-image',
-    sizes: SEEDREAM_5_0_SIZES, // 2K+3K
+    sizes: SEEDREAM_5_0_SIZES,
   },
 
-  // === Video Generation Models ===
+  // === Video Models ===
   {
     id: 'seedance-1.5',
-    name: 'Seedance 1.5',
+    name: 'Seedance 1.5 Pro',
     provider: '字节跳动 / 火山引擎',
-    description: '高质量AI视频生成',
+    description: '高质量AI视频生成，支持多种模式',
     backendModel: 'doubao-seedance-1-5-pro-251215',
     capabilities: ['text2img', 'img2img'],
     category: 'video',
@@ -176,8 +165,26 @@ export const AI_MODELS: AIModel[] = [
     apiKeyPlaceholder: '输入火山引擎 API Key',
     apiKeyLabel: '火山引擎 API Key',
     apiType: 'volcengine-video',
-    sizes: SEEDANCE_SIZES, // 保持原有尺寸，不关联K级
+    sizes: SEEDANCE_SIZES,
+    videoModes: ['text2video', 'img2video', 'img2video_first_last', 'img2video_reference', 'draft'],
   },
+];
+
+// Chat models (use Lovable AI Gateway, no user API key needed)
+export interface ChatModel {
+  id: string;
+  name: string;
+  provider: string;
+  description: string;
+  gatewayModel: string;
+}
+
+export const CHAT_MODELS: ChatModel[] = [
+  { id: 'gpt-5', name: 'GPT-5', provider: 'OpenAI', description: '强大的推理和多模态理解', gatewayModel: 'openai/gpt-5' },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI', description: '平衡性能与速度', gatewayModel: 'openai/gpt-5-mini' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'Google', description: '视觉+文本，复杂推理', gatewayModel: 'google/gemini-2.5-pro' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google', description: '快速高效，性价比高', gatewayModel: 'google/gemini-2.5-flash' },
+  { id: 'gemini-3-flash', name: 'Gemini 3 Flash', provider: 'Google', description: '最新预览版，均衡能力', gatewayModel: 'google/gemini-3-flash-preview' },
 ];
 
 export const IMAGE_MODELS = AI_MODELS.filter(m => m.category === 'image');
