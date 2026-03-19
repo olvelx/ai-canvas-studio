@@ -1,12 +1,13 @@
 import React from 'react';
-import { Sparkles, Image, Video, MessageSquare } from 'lucide-react';
+import { Sparkles, Image, Video, MessageSquare, Clock } from 'lucide-react';
 
-type TabType = 'image' | 'video' | 'chat';
+export type TabType = 'image' | 'video' | 'chat' | 'history';
 
 const navItems = [
   { id: 'image' as TabType, icon: Image, label: 'AI 图像生成' },
   { id: 'video' as TabType, icon: Video, label: 'AI 视频生成' },
   { id: 'chat' as TabType, icon: MessageSquare, label: 'AI 连续对话' },
+  { id: 'history' as TabType, icon: Clock, label: '历史记录' },
 ];
 
 interface AppSidebarProps {
@@ -17,7 +18,6 @@ interface AppSidebarProps {
 export const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   return (
     <aside className="w-[220px] min-w-[220px] bg-sidebar-bg flex flex-col border-r border-border/50">
-      {/* Logo */}
       <div className="p-5 border-b border-sidebar-hover">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
@@ -29,8 +29,6 @@ export const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           </div>
         </div>
       </div>
-
-      {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
         <p className="px-3 py-2 text-xs font-medium text-sidebar-fg/60 uppercase tracking-wider">创作工具</p>
         {navItems.map((item) => (
@@ -48,12 +46,8 @@ export const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           </button>
         ))}
       </nav>
-
-      {/* Footer */}
       <div className="p-4 border-t border-sidebar-hover">
-        <p className="text-xs text-sidebar-fg/40 text-center">
-          ArtForge v1.0
-        </p>
+        <p className="text-xs text-sidebar-fg/40 text-center">ArtForge v1.0</p>
       </div>
     </aside>
   );
