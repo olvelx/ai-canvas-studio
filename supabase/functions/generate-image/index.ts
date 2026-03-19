@@ -124,15 +124,16 @@ serve(async (req) => {
         response_format: "url",
       };
 
-      // 图生图：添加参考图片
+      // 图生图：添加参考图片（修正参数名为 image，传递纯 base64）
       if (image) {
-        // Seedream 图生图使用 reference_images 参数
         let imgData = image;
-        // 确保是完整的 data URL 格式
-        if (!imgData.startsWith('data:')) {
-          imgData = `data:image/jpeg;base64,${imgData}`;
+        // 提取纯 base64（去掉 data: 前缀）
+        const base64Match = imgData.match(/^data:([^;]+);base64,(.+)$/);
+        if (base64Match) {
+          imgData = base64Match[2]; // 只保留纯 base64 部分
         }
-        requestBody.reference_images = [imgData];
+        // 修正：Seedream 图生图通常用 image 参数（而非 reference_images）
+        requestBody.image = imgData;
       }
 
       const response = await fetchWithTimeout(
@@ -165,29 +166,36 @@ serve(async (req) => {
     // ====== Volcengine Seedance 视频生成 ======
     if (apiType === "volcengine-video") {
       const content: any[] = [{ type: "text", text: prompt }];
-      const vMode = videoMode || "text2video";
+      const videoMode = "text2video" // 默认文生视频
 
-      // 图生视频 - 首帧
-      if ((vMode === "img2video" || vMode === "img2video_first_last" || vMode === "img2video_reference") && image) {
+      // 2. 图生视频 - 首帧（修正：传递纯 base64 + 加 role）
+      if ((videoMode === "img2video" || videoMode === "img2video_first_last" || videoMode === "img2video_reference") && image) {
         let imgData = image;
-        if (imgData.startsWith('data:')) {
-          // 提取纯 base64
-          const match = imgData.match(/^data:([^;]+);base64,(.+)$/);
-          if (match) imgData = `data:${match[1]};base64,${match[2]}`;
+        // 提取纯 base64（去掉 data: 前缀）
+        const base64Match = imgData.match(/^data:([^;]+);base64,(.+)$/);
+        if (base64Match) {
+          imgData = base64Match[2];
         }
-        content.push({ type: "image_url", image_url: { url: imgData } });
-      }
+        content.push({ 
+          type: "image_url", 
+          image_url: { url: imgData },
+          role: videoMode === "img2video_reference" ? "reference_image" : "first_frame" // 加 role
+        });
+       }
 
-      // 图生视频 - 尾帧（首尾帧模式）
-      if (vMode === "img2video_first_last" && lastImage) {
-        let lastImgData = lastImage;
-        if (lastImgData.startsWith('data:')) {
-          const match = lastImgData.match(/^data:([^;]+);base64,(.+)$/);
-          if (match) lastImgData = `data:${match[1]};base64,${match[2]}`;
+       // 3. 图生视频 - 尾帧（修正：传递纯 base64 + 加 role: last_frame）
+       if (videoMode === "img2video_first_last" && lastImage) {
+         let lastImgData = lastImage;
+         const base64Match = lastImgData.match(/^data:([^;]+);base64,(.+)$/);
+         if (base64Match) {
+           lastImgData = base64Match[2];
+         }
+         content.push({ 
+           type: "image_url", 
+           image_url: { url: lastImgData },
+           role: "last_frame" // 必须加 role
+         });
         }
-        content.push({ type: "image_url", image_url: { url: lastImgData } });
-      }
-
       const requestBody: any = {
         model: model.trim(),
         content,
