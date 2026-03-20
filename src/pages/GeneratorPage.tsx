@@ -270,7 +270,7 @@ const GeneratorPage = () => {
                       <div className="flex items-center gap-3">
                         <label className="text-xs text-muted-foreground w-16 shrink-0">分辨率</label>
                         <div className="flex gap-2">
-                          {['480p', '720p'].map(r => (
+                          {['480p', '720p', '1080p'].map(r => (
                             <button
                               key={r}
                               onClick={() => setVideoResolution(r)}
