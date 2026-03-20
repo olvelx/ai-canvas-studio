@@ -1,6 +1,6 @@
 import React from 'react';
 import { VideoMode } from '@/lib/models';
-import { Film, Image, Images, Palette, Zap } from 'lucide-react';
+import { Film, Image, Images } from 'lucide-react';
 
 interface VideoModeSelectorProps {
   mode: VideoMode;
@@ -11,13 +11,11 @@ const VIDEO_MODE_OPTIONS: { id: VideoMode; label: string; icon: React.ElementTyp
   { id: 'text2video', label: '文生视频', icon: Film, desc: '纯文字描述生成视频' },
   { id: 'img2video', label: '首帧生成', icon: Image, desc: '基于首帧图片生成视频' },
   { id: 'img2video_first_last', label: '首尾帧', icon: Images, desc: '基于首帧和尾帧生成' },
-  { id: 'img2video_reference', label: '参考图', icon: Palette, desc: '基于参考图风格生成' },
-  { id: 'draft', label: '样片模式', icon: Zap, desc: '快速预览，低成本试看' },
 ];
 
 export const VideoModeSelector = ({ mode, onModeChange }: VideoModeSelectorProps) => {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {VIDEO_MODE_OPTIONS.map((opt) => {
         const isSelected = opt.id === mode;
         const Icon = opt.icon;

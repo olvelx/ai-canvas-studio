@@ -20,7 +20,6 @@ function generateRequestId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
-// 从分辨率格式获取宽高比
 function getAspectRatio(size: string): string {
   if (size.includes(":") && !size.includes("x")) return size;
   const ratioMap: Record<string, string> = {
@@ -55,7 +54,7 @@ serve(async (req) => {
       });
     }
 
-    const { model, modelId, prompt, image, lastImage, apiKey, apiType, size, videoMode, duration, resolution, generateAudio, draft } = body;
+    const { model, prompt, image, lastImage, apiKey, apiType, size, videoMode, duration, resolution, generateAudio, draft } = body;
 
     if (!apiKey || !prompt || !model || !apiType) {
       return new Response(JSON.stringify({ requestId, error: "缺少必要参数" }), {
@@ -124,15 +123,13 @@ serve(async (req) => {
         response_format: "url",
       };
 
-      // 图生图：添加参考图片（修正参数名为 image，传递纯 base64）
+      // 图生图：添加参考图片
       if (image) {
         let imgData = image;
-        // 提取纯 base64（去掉 data: 前缀）
         const base64Match = imgData.match(/^data:([^;]+);base64,(.+)$/);
         if (base64Match) {
-          imgData = base64Match[2]; // 只保留纯 base64 部分
+          imgData = base64Match[2];
         }
-        // 修正：Seedream 图生图通常用 image 参数（而非 reference_images）
         requestBody.image = imgData;
       }
 
@@ -165,37 +162,42 @@ serve(async (req) => {
 
     // ====== Volcengine Seedance 视频生成 ======
     if (apiType === "volcengine-video") {
+      const actualVideoMode = videoMode || "text2video";
       const content: any[] = [{ type: "text", text: prompt }];
-      const videoMode = "text2video" // 默认文生视频
 
-      // 2. 图生视频 - 首帧（修正：传递纯 base64 + 加 role）
-      if ((videoMode === "img2video" || videoMode === "img2video_first_last" || videoMode === "img2video_reference") && image) {
-        let imgData = image;
-        // 提取纯 base64（去掉 data: 前缀）
-        const base64Match = imgData.match(/^data:([^;]+);base64,(.+)$/);
-        if (base64Match) {
-          imgData = base64Match[2];
-        }
-        content.push({ 
-          type: "image_url", 
-          image_url: { url: imgData },
-          role: videoMode === "img2video_reference" ? "reference_image" : "first_frame" // 加 role
+      // 图生视频 - 首帧
+      if (actualVideoMode === "img2video" && image) {
+        content.push({
+          type: "image_url",
+          image_url: { url: image }, // 支持 data:image/...;base64,... 或 URL
         });
-       }
+      }
 
-       // 3. 图生视频 - 尾帧（修正：传递纯 base64 + 加 role: last_frame）
-       if (videoMode === "img2video_first_last" && lastImage) {
-         let lastImgData = lastImage;
-         const base64Match = lastImgData.match(/^data:([^;]+);base64,(.+)$/);
-         if (base64Match) {
-           lastImgData = base64Match[2];
-         }
-         content.push({ 
-           type: "image_url", 
-           image_url: { url: lastImgData },
-           role: "last_frame" // 必须加 role
-         });
+      // 图生视频 - 首尾帧
+      if (actualVideoMode === "img2video_first_last" && image) {
+        content.push({
+          type: "image_url",
+          image_url: { url: image },
+          role: "first_frame",
+        });
+        if (lastImage) {
+          content.push({
+            type: "image_url",
+            image_url: { url: lastImage },
+            role: "last_frame",
+          });
         }
+      }
+
+      // 图生视频 - 参考图
+      if (actualVideoMode === "img2video_reference" && image) {
+        content.push({
+          type: "image_url",
+          image_url: { url: image },
+          role: "reference_image",
+        });
+      }
+
       const requestBody: any = {
         model: model.trim(),
         content,
@@ -208,13 +210,22 @@ serve(async (req) => {
       if (typeof generateAudio === 'boolean') requestBody.generate_audio = generateAudio;
       if (typeof draft === 'boolean') requestBody.draft = draft;
 
-      // 返回尾帧
-      requestBody.return_last_frame = true;
+      // 返回尾帧（非样片模式时）
+      if (!draft) {
+        requestBody.return_last_frame = true;
+      }
+
+      // 样片模式强制 480p
+      if (draft) {
+        requestBody.resolution = "480p";
+      }
+
+      requestBody.watermark = false;
 
       console.log(`[${requestId}] Seedance 请求:`, JSON.stringify({ ...requestBody, content: `[${content.length} items]` }));
 
       const response = await fetchWithTimeout(
-        "https://ark.cn-beijing.volces.com/api/v3/contents/generations",
+        "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks",
         {
           method: "POST",
           headers: {

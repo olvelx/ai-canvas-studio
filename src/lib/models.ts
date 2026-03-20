@@ -1,5 +1,5 @@
 export type GenerationMode = 'text2img' | 'img2img';
-export type VideoMode = 'text2video' | 'img2video' | 'img2video_first_last' | 'img2video_reference' | 'draft';
+export type VideoMode = 'text2video' | 'img2video' | 'img2video_first_last' | 'img2video_reference';
 export type ModelCategory = 'image' | 'video' | 'chat';
 
 export interface ImageSize {
@@ -166,7 +166,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyLabel: '火山引擎 API Key',
     apiType: 'volcengine-video',
     sizes: SEEDANCE_SIZES,
-    videoModes: ['text2video', 'img2video', 'img2video_first_last', 'img2video_reference', 'draft'],
+    videoModes: ['text2video', 'img2video', 'img2video_first_last'],
   },
 ];
 
