@@ -17,6 +17,27 @@ serve(async (req) => {
 
     const selectedModel = model || "google/gemini-3-flash-preview";
 
+    // Transform messages: support multimodal content (text + images)
+    const transformedMessages = messages.map((msg: any) => {
+      // If content is already an array (multimodal), pass through
+      if (Array.isArray(msg.content)) {
+        return {
+          role: msg.role,
+          content: msg.content.map((part: any) => {
+            if (part.type === 'image_url') {
+              return {
+                type: 'image_url',
+                image_url: { url: part.image_url.url },
+              };
+            }
+            return part;
+          }),
+        };
+      }
+      // Plain text message
+      return { role: msg.role, content: msg.content };
+    });
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -26,8 +47,8 @@ serve(async (req) => {
       body: JSON.stringify({
         model: selectedModel,
         messages: [
-          { role: "system", content: "你是一个智能AI助手，可以帮助用户解答各种问题。请用清晰、有条理的方式回复，支持使用 Markdown 格式。" },
-          ...messages,
+          { role: "system", content: "你是一个智能AI助手，可以帮助用户解答各种问题。用户可能会发送图片或文件内容给你分析。请用清晰、有条理的方式回复，支持使用 Markdown 格式。" },
+          ...transformedMessages,
         ],
         stream: true,
       }),
