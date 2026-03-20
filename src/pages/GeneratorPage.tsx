@@ -101,7 +101,7 @@ const GeneratorPage = () => {
       };
 
       if (activeTab === 'video') {
-        body.videoMode = isDraft ? 'draft' : videoMode;
+        body.videoMode = videoMode;
         body.duration = videoDuration;
         body.resolution = videoResolution;
         body.generateAudio = generateAudio;
