@@ -1,5 +1,5 @@
 export type GenerationMode = 'text2img' | 'img2img';
-export type VideoMode = 'text2video' | 'img2video' | 'img2video_first_last' | 'img2video_reference' | 'draft';
+export type VideoMode = 'text2video' | 'img2video' | 'img2video_first_last' | 'img2video_reference';
 export type ModelCategory = 'image' | 'video' | 'chat';
 
 export interface ImageSize {
