@@ -166,7 +166,7 @@ export const AI_MODELS: AIModel[] = [
     apiKeyLabel: '火山引擎 API Key',
     apiType: 'volcengine-video',
     sizes: SEEDANCE_SIZES,
-    videoModes: ['text2video', 'img2video', 'img2video_first_last', 'img2video_reference', 'draft'],
+    videoModes: ['text2video', 'img2video', 'img2video_first_last'],
   },
 ];
 
